@@ -18,30 +18,66 @@ def get_cline_config_path() -> Path:
     
     Returns:
         Path: The path to the Cline configuration file
+        
+    Raises:
+        RuntimeError: If the platform is not supported or the path cannot be determined
     """
-    if getpass.getuser() == 'ec2-user':
-        return Path.home() / ".vscode-server/data/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"
-    elif sys.platform == 'darwin':
-        return Path.home() / "Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"
+    settings_dir = "settings/cline_mcp_settings.json"
+    publisher_dir = "saoudrizwan.claude-dev"
     
-    # Default to EC2 path for any other case
-    return Path.home() / ".vscode-server/data/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"
+    if getpass.getuser() == 'ec2-user':
+        return Path.home() / ".vscode-server/data/User/globalStorage" / publisher_dir / settings_dir
+    elif sys.platform == 'darwin':
+        return Path.home() / "Library/Application Support/Code/User/globalStorage" / publisher_dir / settings_dir
+    elif sys.platform == 'win32':
+        return Path(os.getenv('APPDATA', '')) / "Code/User/globalStorage" / publisher_dir / settings_dir
+        
+    raise RuntimeError(f"Unsupported platform: {sys.platform}. Currently only supports EC2 instances, macOS, and Windows.")
 
 def get_claude_config_path() -> Path:
     """Determine the appropriate Claude Desktop configuration file path based on the environment.
     
     Returns:
         Path: The path to the Claude Desktop configuration file
+        
+    Raises:
+        RuntimeError: If the platform is not supported or the path cannot be determined
     """
-    if getpass.getuser() == 'ec2-user':
-        return Path.home() / ".vscode-server/data/User/globalStorage/anthropic.claude/settings/claude_desktop_config.json"
-    elif sys.platform == 'darwin':
-        return Path.home() / "Library/Application Support/Claude/claude_desktop_config.json"
-    elif sys.platform == 'win32':
-        return Path(os.getenv('APPDATA', '')) / "Claude/claude_desktop_config.json"
+    settings_file = "claude_desktop_config.json"
+    publisher_dir = "anthropic.claude"
     
-    # Default to EC2 path for any other case
-    return Path.home() / ".vscode-server/data/User/globalStorage/anthropic.claude/settings/claude_desktop_config.json"
+    if getpass.getuser() == 'ec2-user':
+        return Path.home() / ".vscode-server/data/User/globalStorage" / publisher_dir / "settings" / settings_file
+    elif sys.platform == 'darwin':
+        return Path.home() / "Library/Application Support/Claude" / settings_file
+    elif sys.platform == 'win32':
+        return Path(os.getenv('APPDATA', '')) / "Claude" / settings_file
+        
+    raise RuntimeError(f"Unsupported platform: {sys.platform}. Currently only supports EC2 instances, macOS, and Windows.")
+
+def get_roo_config_path() -> Path:
+    """Determine the appropriate Roo configuration file path based on the environment.
+    
+    Returns:
+        Path: The path to the Roo configuration file
+        
+    Raises:
+        RuntimeError: If the platform is not supported or the path cannot be determined
+    """
+    settings_dir = "settings/cline_mcp_settings.json"
+    publisher_dir = "rooveterinaryinc.roo-cline"
+    
+    if getpass.getuser() == 'ec2-user':
+        return Path.home() / ".vscode-server/data/User/globalStorage" / publisher_dir / settings_dir
+    elif sys.platform == 'darwin':
+        return Path.home() / "Library/Application Support/Code/User/globalStorage" / publisher_dir / settings_dir
+    elif sys.platform == 'win32':
+        return Path(os.getenv('APPDATA', '')) / "Code/User/globalStorage" / publisher_dir / settings_dir
+        
+    raise RuntimeError(f"Unsupported platform: {sys.platform}. Currently only supports EC2 instances, macOS, and Windows.")
+
+
+
 
 def add_to_config(
     server_name: str,
@@ -57,16 +93,21 @@ def add_to_config(
         required_env_vars: List of required environment variable names
         command: Command to run the server (default: "uvx")
         env_vars: Optional dict of environment variables to use instead of current env
-        config_type: Type of config file ("cline" or "claude")
+        config_type: Type of config file ("cline", "claude", or "roo")
         
     Raises:
         ValueError: If config_type is invalid or required environment variables are missing
     """
-    if config_type not in ["cline", "claude"]:
-        raise ValueError("config_type must be 'cline' or 'claude'")
+    if config_type not in ["cline", "claude", "roo"]:
+        raise ValueError("config_type must be 'cline', 'claude', or 'roo'")
         
     # Get config file path
-    settings_path = get_cline_config_path() if config_type == "cline" else get_claude_config_path()
+    if config_type == "cline":
+        settings_path = get_cline_config_path()
+    elif config_type == "claude":
+        settings_path = get_claude_config_path()
+    else:  # roo
+        settings_path = get_roo_config_path()
     
     # Load existing settings
     try:
@@ -90,10 +131,10 @@ def add_to_config(
         "env": env
     }
     
-    # Add Cline-specific settings
-    if config_type == "cline":
+    # Add VSCode extension specific settings for Cline and Roo
+    if config_type in ["cline", "roo"]:
         server_config.update({
-            "disabled": True,
+            "disabled": False,
             "autoApprove": []
         })
     
